@@ -93,3 +93,4 @@ logs/
 ## harness db
 **/*.db
 
+main/assets/lang_config.h

@@ -1054,8 +1054,13 @@ idf_component_register(SRCS ${SOURCES}
                         efuse
                         bt
                         fatfs
+                        agentscope-core
                         ${MAIN_PRIV_REQUIRES_EXTRA}
                     )
+
+# AgentScope bridge：让 agentscope-core 的 as_mcp_bridge.cc 能 __has_include("mcp_server.h")
+idf_component_get_property(AS_CORE_LIB agentscope-core COMPONENT_LIB)
+target_include_directories(${AS_CORE_LIB} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 # Use target_compile_definitions to define BOARD_TYPE, BOARD_NAME
 # If BOARD_NAME is empty, use BOARD_TYPE

@@ -9,6 +9,13 @@
 #include "mcp_server.h"
 #include "assets.h"
 #include "settings.h"
+#ifdef CONFIG_AGENTSCOPE_CORE_ENABLE
+#include "as_tool.h"
+#include "as_mcp_bridge.h"
+#include "as_telemetry.h"
+#include <cJSON.h>
+#include <esp_log.h>
+#endif
 
 #include <cstring>
 #include <esp_log.h>
@@ -97,6 +104,47 @@ void Application::Initialize() {
     auto& mcp_server = McpServer::GetInstance();
     mcp_server.AddCommonTools();
     mcp_server.AddUserOnlyTools();
+
+#ifdef CONFIG_AGENTSCOPE_CORE_ENABLE
+    // ── AgentScope C++ 工具注册（xiaozhi-integration Task 1 Step 4）──
+    // 注册进 as_tool 注册表后由 as_mcp_bridge_register_all() 桥接进 McpServer，
+    // 云端 LLM 经标准 MCP 协议发现并调用。
+    as_tool_registry_init();
+
+    // 演示工具 1：设备信息（无参数）
+    AS_TOOL_REGISTER_NO_PARAMS("agentscope.device_info",
+        "Get AgentScope demo device info (model, status)",
+        [](const cJSON* params, void* user_data) -> cJSON* {
+            cJSON* out = cJSON_CreateObject();
+            cJSON_AddStringToObject(out, "model", "xiaozhi-esp32");
+            cJSON_AddStringToObject(out, "runtime", "agentscope-cpp");
+            cJSON_AddBoolToObject(out, "ready", true);
+            return out;
+        });
+
+    // 演示工具 2：温度查询（带参数 schema；接入真实传感器时替换实现）
+    static const as_tool_param_t temp_params[] = {{
+        .name = "unit", .type = "string",
+        .description = "Temperature unit: celsius or fahrenheit",
+        .required = false, .has_default = true, .str_default = "celsius",
+        .has_range = false, .min_value = 0, .max_value = 0,
+    }};
+    AS_TOOL_REGISTER("agentscope.get_temperature",
+        "Get current ambient temperature (demo placeholder until sensor wired)",
+        temp_params,
+        [](const cJSON* params, void* user_data) -> cJSON* {
+            cJSON* out = cJSON_CreateObject();
+            cJSON_AddNumberToObject(out, "temperature", 25.0);
+            cJSON_AddStringToObject(out, "unit", "celsius");
+            return out;
+        });
+
+    // 桥接进 xiaozhi McpServer + 启动遥测
+    as_mcp_bridge_init();
+    as_mcp_bridge_register_all();
+    as_telemetry_init();
+    ESP_LOGI("Main", "AgentScope tools registered and bridged to McpServer");
+#endif
 
     // Set network event callback for UI updates and network state handling
     board.SetNetworkEventCallback([this](NetworkEvent event, const std::string& data) {

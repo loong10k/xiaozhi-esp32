@@ -1,0 +1,14 @@
+# ==============================================================================
+# AgentScope C++ sdkconfig 叠加（esp32s3）— xiaozhi-integration Task 2
+# 用法：idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults.esp32s3;sdkconfig.defaults.esp32s3.agentscope" build
+# ==============================================================================
+
+# 启用 agentscope-core（工具注册表 + MCP 桥接 + 遥测）
+CONFIG_AGENTSCOPE_CORE_ENABLE=y
+CONFIG_AGENTSCOPE_CORE_TELEMETRY=y
+
+# 嵌入式资源上限（固定池，零堆核心层）
+CONFIG_AGENTSCOPE_CORE_MAX_TOOLS=16
+CONFIG_AGENTSCOPE_CORE_MAX_PARAMS_PER_TOOL=8
+CONFIG_AGENTSCOPE_CORE_MAX_RULES=8
+CONFIG_AGENTSCOPE_CORE_MAX_HOOKS_PER_POINT=4

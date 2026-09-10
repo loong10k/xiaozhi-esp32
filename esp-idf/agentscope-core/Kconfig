@@ -1,0 +1,149 @@
+menu "AgentScope Core"
+    config AGENTSCOPE_CORE_ENABLE
+        bool "Enable AgentScope Core"
+        default y
+        help
+            Enable AgentScope Core IoT agent framework.
+            Adds tool registry, hook system, local rules, agent card,
+            telemetry, formatters, credentials, events, plans, and skills.
+
+    config AGENTSCOPE_CORE_MAX_TOOLS
+        int "Max registered tools"
+        default 16
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 4 64
+
+    config AGENTSCOPE_CORE_MAX_PARAMS_PER_TOOL
+        int "Max parameters per tool"
+        default 8
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 2 16
+
+    config AGENTSCOPE_CORE_MAX_RULES
+        int "Max local rules"
+        default 8
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 1 32
+
+    config AGENTSCOPE_CORE_MAX_HOOKS_PER_POINT
+        int "Max hooks per interception point"
+        default 4
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 1 16
+
+    config AGENTSCOPE_CORE_TELEMETRY
+        bool "Enable device telemetry"
+        default y
+        depends on AGENTSCOPE_CORE_ENABLE
+
+    config AGENTSCOPE_CORE_TELEMETRY_MAX_SENSORS
+        int "Max sensor data entries in telemetry cache"
+        default 8
+        depends on AGENTSCOPE_CORE_TELEMETRY
+        range 2 32
+
+    config AGENTSCOPE_CORE_MCP_BRIDGE
+        bool "Bridge to xiaozhi McpServer"
+        default y
+        depends on AGENTSCOPE_CORE_ENABLE
+
+    config AGENTSCOPE_CORE_RULE_TICK_MS
+        int "Rule engine evaluation interval (ms)"
+        default 1000
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 100 60000
+
+    config AGENTSCOPE_CORE_CARD_MAX_SKILLS
+        int "Max skills in AgentCard"
+        default 4
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 1 16
+
+    # --- Formatter ---
+    config AGENTSCOPE_CORE_FORMATTER
+        bool "Enable provider formatters"
+        default y
+        depends on AGENTSCOPE_CORE_ENABLE
+        help
+            Enable LLM provider-specific request/response formatting.
+            Supports OpenAI, DashScope, Anthropic, Gemini, and Ollama APIs.
+
+    config AGENTSCOPE_CORE_FORMATTER_MAX_MESSAGES
+        int "Max messages per request"
+        default 32
+        depends on AGENTSCOPE_CORE_FORMATTER
+        range 4 128
+
+    # --- Credential ---
+    config AGENTSCOPE_CORE_CREDENTIAL
+        bool "Enable credential management"
+        default y
+        depends on AGENTSCOPE_CORE_ENABLE
+        help
+            Enable API key management for LLM providers.
+            Supports loading from environment variables or NVS storage.
+
+    # --- Event System ---
+    config AGENTSCOPE_CORE_EVENT_BUFFER_SIZE
+        int "Event buffer size (max pending events)"
+        default 16
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 4 64
+
+    # --- Plan System ---
+    config AGENTSCOPE_CORE_MAX_PLANS
+        int "Max concurrent plans"
+        default 3
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 1 8
+
+    config AGENTSCOPE_CORE_MAX_PLAN_STEPS
+        int "Max steps per plan"
+        default 8
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 2 16
+
+    # --- Skill System ---
+    config AGENTSCOPE_CORE_MAX_SKILLS
+        int "Max registered skills"
+        default 8
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 1 16
+
+    config AGENTSCOPE_CORE_MAX_TOOLS_PER_SKILL
+        int "Max tools per skill"
+        default 8
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 2 16
+
+    config AGENTSCOPE_CORE_SKILL_PROMPT_BUF_SIZE
+        int "Skill prompt concatenation buffer size (bytes)"
+        default 512
+        depends on AGENTSCOPE_CORE_ENABLE
+        range 128 2048
+        help
+            Size of the static buffer used to concatenate instructions
+            from all active skills into a combined system prompt.
+            Increase if skills with long instructions are needed.
+
+    # --- RAG ---
+    config AGENTSCOPE_CORE_RAG
+        bool "Enable RAG (Retrieval-Augmented Generation)"
+        default y
+        depends on AGENTSCOPE_CORE_ENABLE
+        help
+            Enable RAG abstractions. Core provides lightweight interfaces;
+            Extensions provide vector store implementation (needs PSRAM).
+
+    config AGENTSCOPE_CORE_RAG_MAX_DOCUMENTS
+        int "Max documents in RAG cache"
+        default 16
+        depends on AGENTSCOPE_CORE_RAG
+        range 4 64
+
+    config AGENTSCOPE_CORE_RAG_CONTEXT_MAX_CHARS
+        int "Max characters in RAG context injection"
+        default 2048
+        depends on AGENTSCOPE_CORE_RAG
+        range 256 8192
+endmenu
