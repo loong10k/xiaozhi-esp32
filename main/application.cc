@@ -23,6 +23,7 @@
 #include <driver/gpio.h>
 #include <arpa/inet.h>
 #include <font_awesome.h>
+#include "e2e_profiler.h"
 
 #define TAG "Application"
 

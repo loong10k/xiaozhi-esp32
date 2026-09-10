@@ -31,12 +31,31 @@
  * 2. (Server) -> {Decode Queue} -> [Opus Decoder] -> {Playback Queue} -> (Speaker)
  *
  * We use one task for MIC / Speaker / Processors, and one task for Opus Encoder / Opus Decoder.
- * 
+ *
  * Decode Queue and Send Queue are the main queues, because Opus packets are quite smaller than PCM packets.
- * 
+ *
  */
 
-#define OPUS_FRAME_DURATION_MS 60
+// ---------------------------------------------------------------------------
+// 低延迟配置（v2.0.4，迁移计划 P0-1）
+// 帧长从写死的 60ms 改为 Kconfig 可配（默认 20ms，WebRTC 标准）：
+//   单帧延迟 -40ms，覆盖"编码→上行→ASR 端点"整条链路，端到端约省 120-200ms。
+// 弱网（4G Cat.1）可在 menuconfig 调回 40/60ms。
+// 见 main/Kconfig.projbuild: AGENTSCOPE_OPUS_FRAME_DURATION_MS
+// ---------------------------------------------------------------------------
+#ifdef CONFIG_AGENTSCOPE_OPUS_FRAME_DURATION_MS
+#define OPUS_FRAME_DURATION_MS CONFIG_AGENTSCOPE_OPUS_FRAME_DURATION_MS
+#else
+#define OPUS_FRAME_DURATION_MS 20  // 主机端测试 / 未启用 Kconfig 时的回退值
+#endif
+
+// 播放起播目标缓冲（迁移计划 P0-2 后续 JitterEstimator 的静态默认值）
+#ifdef CONFIG_AGENTSCOPE_JITTER_BUFFER_MS
+#define AGENTSCOPE_JITTER_BUFFER_MS CONFIG_AGENTSCOPE_JITTER_BUFFER_MS
+#else
+#define AGENTSCOPE_JITTER_BUFFER_MS 200
+#endif
+
 #define MAX_ENCODE_TASKS_IN_QUEUE 2
 #define MAX_PLAYBACK_TASKS_IN_QUEUE 2
 #define MAX_DECODE_PACKETS_IN_QUEUE (2400 / OPUS_FRAME_DURATION_MS)

@@ -39,7 +39,29 @@ set(SOURCES "audio/audio_codec.cc"
             "main.cc"
             )
 
-set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols")
+# Agent hosting bridge（v2.0.4：agentscope-cpp × Qwen3-TTS 低延迟链路）
+# 源文件用 GLOB 收集（bridge 主体是 header-only，只有 qwen3_tts_client.cc 参与编译）
+file(GLOB AGENT_HOSTING_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/agent_hosting/*.cc)
+list(APPEND SOURCES ${AGENT_HOSTING_SOURCES})
+
+# agentscope-cpp 流式切片工具（TextChunker）——外置仓库单文件引用
+# 说明：xiaozhi 已有 esp-idf/agentscope-core（C ABI 精简组件），不能重复注册
+# agentscope-cpp 的同名 ESP-IDF 组件，故按"头文件 include + 单源文件编译"方式
+# 引用 TextChunker。后续如需完整 agentscope-cpp 运行时，再切换为 submodule +
+# 统一组件（见 docs/superpowers/plans/2026-09-10-xiaozhi-integration-migration-plan.md 阶段1）。
+set(AGENTSCOPE_CPP_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../../agentscope-cpp")
+if(EXISTS "${AGENTSCOPE_CPP_ROOT}/include/agentscope/core/event/text_chunker.h")
+    list(APPEND SOURCES "${AGENTSCOPE_CPP_ROOT}/src/core/event/text_chunker.cc")
+    # 注意：ESP-IDF 的 INCLUDE_DIRS 不接受绝对路径，
+    # agentscope-cpp 头文件路径在 idf_component_register 之后用
+    # target_include_directories 追加（见下方）。
+    set(AGENTSCOPE_CPP_INCLUDE "${AGENTSCOPE_CPP_ROOT}/include")
+    message(STATUS "agentscope-cpp TextChunker linked from ${AGENTSCOPE_CPP_ROOT}")
+else()
+    message(WARNING "agentscope-cpp repo not found at ${AGENTSCOPE_CPP_ROOT}; StreamFirstChunkBridge will not compile")
+endif()
+
+set(INCLUDE_DIRS "." "display" "display/lvgl_display" "display/lvgl_display/jpg" "audio" "audio/demuxer" "protocols" "agent_hosting")
 
 # Add board common files
 list(APPEND SOURCES
@@ -1061,6 +1083,11 @@ idf_component_register(SRCS ${SOURCES}
 # AgentScope bridge：让 agentscope-core 的 as_mcp_bridge.cc 能 __has_include("mcp_server.h")
 idf_component_get_property(AS_CORE_LIB agentscope-core COMPONENT_LIB)
 target_include_directories(${AS_CORE_LIB} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+
+# agentscope-cpp 头文件路径（绝对路径，须在 register 后以 target 方式追加）
+if(AGENTSCOPE_CPP_INCLUDE)
+    target_include_directories(${COMPONENT_LIB} PUBLIC "${AGENTSCOPE_CPP_INCLUDE}")
+endif()
 
 # Use target_compile_definitions to define BOARD_TYPE, BOARD_NAME
 # If BOARD_NAME is empty, use BOARD_TYPE
