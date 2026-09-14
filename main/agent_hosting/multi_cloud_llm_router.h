@@ -5,10 +5,12 @@
  *       已由 tests/test_model_router.cc 8/8 单测覆盖）桥接到 xiaozhi
  *       的模型调用链：select → ModelRegistry::resolve → 记录结果。
  *
- * 分层说明：
- *   - 核心路由逻辑在 agentscope-cpp（可主机端编译 + 单测）
- *   - 本头文件仅做"endpoint 列表构造 + resolve 调用"的薄封装，
- *     不含可测逻辑，故 header-only。
+ * 分层说明（Protocol 叶子规则）：
+ *   - 头文件仅 include 叶子集（model_router.h）。
+ *   - ModelRegistry / Model / ModelCreationContext 属非叶子（拖入完整
+ *     模型栈），头文件只做前置声明；唯一的调用点 resolve_best() 移入
+ *     multi_cloud_llm_router.cc —— .cc 的 include 是实现细节，不向
+ *     依赖方传递，不违反叶子规则。
  *
  * 默认 endpoint 集（见 2026-09-10-multi-cloud-llm-integration.md §4.1）：
  *   0. dashscope:qwen-plus            （首选）
@@ -23,8 +25,16 @@
 #include <string>
 #include <vector>
 
-#include "agentscope/core/model/model_registry.h"
 #include "agentscope/core/model/model_router.h"
+
+namespace agentscope {
+namespace core {
+namespace model {
+class Model;                  // 完整定义：model_registry.h（非叶子，仅 .cc 可见）
+struct ModelCreationContext;  // 完整定义：model_creation_context.h
+}  // namespace model
+}  // namespace core
+}  // namespace agentscope
 
 namespace xiaozhi {
 
@@ -51,14 +61,9 @@ public:
 
     // 路由到当前最优模型并从 ModelRegistry 解析实例。
     // 失败返回 nullptr（凭证缺失 / 不可解析）。
+    // 实现在 multi_cloud_llm_router.cc（需 ModelRegistry 完整定义）。
     std::shared_ptr<agentscope::core::model::Model> resolve_best(
-        const agentscope::core::model::ModelCreationContext& ctx) {
-        const auto& ep = router_.select();
-        current_index_ = index_of(ep.model_id);
-        auto model =
-            agentscope::core::model::ModelRegistry::resolve(ep.model_id, ctx);
-        return model;
-    }
+        const agentscope::core::model::ModelCreationContext& ctx);
 
     // 调用成功/失败回报（透传给核心 router）
     void report_success(double latency_ms) {
