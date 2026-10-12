@@ -1,5 +1,13 @@
 menu "Xiaozhi Assistant"
 
+config XIAOZHI_AGENTSCOPE
+    bool "Enable embedded AgentScope component"
+    default n
+    help
+        Link the external AgentScope ESP-IDF framework into this firmware.
+        Set AGENTSCOPE_CPP_ROOT to the agentscope-cpp checkout before configuring.
+        This build switch alone does not enable the Agent runtime or alter voice routing.
+
 config OTA_URL
     string "Default OTA URL"
     default "https://api.tenclass.net/xiaozhi/ota/"
