@@ -24,3 +24,17 @@ idf_build_set_property(MINIMAL_BUILD ON)
 
 set(PROJECT_VER "2.5.3")
 project(xiaozhi)
+
+# Fail fast: never allow a silent AgentScope-off build when the feature is on.
+# main is registered several times per configure; the first registration runs
+# before Kconfig and wins the MINIMAL_BUILD closure, so a CONFIG-only guard can
+# silently drop agentscope-framework. Verify the final closure explicitly.
+if(CONFIG_XIAOZHI_AGENTSCOPE)
+    idf_build_get_property(build_components BUILD_COMPONENTS)
+    if(NOT "agentscope-framework" IN_LIST build_components)
+        message(FATAL_ERROR
+            "CONFIG_XIAOZHI_AGENTSCOPE=y but agentscope-framework is not in the "
+            "build component closure. Set AGENTSCOPE_CPP_ROOT to a valid "
+            "agentscope-cpp checkout before configuring.")
+    endif()
+endif()

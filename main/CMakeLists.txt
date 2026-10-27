@@ -1098,11 +1098,28 @@ if(CONFIG_IDF_TARGET_ESP32S3)
 endif()
 
 set(MAIN_PRIV_REQUIRES_EXTRA "")
-if(CONFIG_XIAOZHI_AGENTSCOPE)
-    if(NOT DEFINED AGENTSCOPE_CPP_ROOT)
+# AGENTSCOPE_CPP_ROOT directly: the root CMakeLists only defines it (from the
+# environment) when the env var is set; Kconfig may not be visible during the
+# first main registration, so mirror the env-aware discovery here.
+if(CONFIG_XIAOZHI_AGENTSCOPE OR
+   (DEFINED ENV{AGENTSCOPE_CPP_ROOT} AND NOT "$ENV{AGENTSCOPE_CPP_ROOT}" STREQUAL ""))
+    if(NOT DEFINED AGENTSCOPE_CPP_ROOT
+       AND NOT (DEFINED ENV{AGENTSCOPE_CPP_ROOT} AND NOT "$ENV{AGENTSCOPE_CPP_ROOT}" STREQUAL ""))
         message(FATAL_ERROR "CONFIG_XIAOZHI_AGENTSCOPE requires AGENTSCOPE_CPP_ROOT")
     endif()
     list(APPEND MAIN_PRIV_REQUIRES_EXTRA agentscope-framework)
+endif()
+# B′ wiring (design §2.1): the adapter is NOT an IDF component; its single
+# translation unit is compiled into the main component from the sibling
+# agentscope-cpp checkout. Gate on CONFIG only: the sources list does not
+# affect the component closure, so early-expansion (CONFIG not yet visible)
+# simply skips the append and the real pass picks it up.
+if(CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER)
+    if(NOT DEFINED AGENTSCOPE_CPP_ROOT)
+        message(FATAL_ERROR "CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER requires AGENTSCOPE_CPP_ROOT")
+    endif()
+    list(APPEND SOURCES "${AGENTSCOPE_CPP_ROOT}/esp-idf/xiaozhi-adapter/xiaozhi_adapter.cc")
+    list(APPEND INCLUDE_DIRS "${AGENTSCOPE_CPP_ROOT}/esp-idf/xiaozhi-adapter/include")
 endif()
 if(CONFIG_XIAOZHI_NETWORK_ETHERNET AND CONFIG_XIAOZHI_ETH_PHY_IP101)
     list(APPEND MAIN_PRIV_REQUIRES_EXTRA espressif__ip101)
