@@ -49,6 +49,12 @@ Application::Application() : notify_player_(audio_service_) {
 }
 
 Application::~Application() {
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+    // B′ S0（设计 §4.3）：兜底关停（宿主实际不走此路径，仅为完整性）。
+    if (xiaozhi_adapter_ != nullptr) {
+        xiaozhi_adapter_->Shutdown(0);
+    }
+#endif
     notify_player_.Stop();
     if (clock_timer_handle_ != nullptr) {
         esp_timer_stop(clock_timer_handle_);
@@ -170,6 +176,14 @@ void Application::Initialize() {
                 break;
         }
     });
+
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+    // B′ S0（设计 §4.2）：主任务同步上下文创建；失败不重试、不阻塞启动。
+    xiaozhi_adapter_ = XiaozhiAdapter::Create();
+    if (xiaozhi_adapter_ == nullptr) {
+        ESP_LOGE("xiaozhi_adapter", "create failed: out of memory; continuing without adapter");
+    }
+#endif
 
     // Start network asynchronously
     board.StartNetwork();
@@ -297,6 +311,11 @@ void Application::Run() {
 
 void Application::HandleNetworkConnectedEvent() {
     ESP_LOGI(TAG, "Network connected");
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+    if (xiaozhi_adapter_ != nullptr) {
+        xiaozhi_adapter_->OnNetworkConnected();
+    }
+#endif
     auto state = GetDeviceState();
 
     if (state == kDeviceStateStarting || state == kDeviceStateWifiConfiguring) {
@@ -323,6 +342,11 @@ void Application::HandleNetworkConnectedEvent() {
 }
 
 void Application::HandleNetworkDisconnectedEvent() {
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+    if (xiaozhi_adapter_ != nullptr) {
+        xiaozhi_adapter_->OnNetworkDisconnected();
+    }
+#endif
     // Close current conversation when network disconnected
     auto state = GetDeviceState();
     if (state == kDeviceStateNotifying) {
@@ -1281,6 +1305,12 @@ void Application::Reboot() {
     }
     protocol_.reset();
     audio_service_.Stop();
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+    // B′ S0（设计 §4.3）：重启路径关停窗口；超时记录后继续重启。
+    if (xiaozhi_adapter_ != nullptr) {
+        xiaozhi_adapter_->Shutdown(XiaozhiAdapter::kShutdownTimeoutMs);
+    }
+#endif
 
     vTaskDelay(pdMS_TO_TICKS(1000));
     esp_restart();
@@ -1451,5 +1481,11 @@ void Application::ResetProtocol() {
         }
         // Reset protocol
         protocol_.reset();
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+        // B′ S0（设计 §7）：协议重置只推进代次，不销毁适配器。
+        if (xiaozhi_adapter_ != nullptr) {
+            xiaozhi_adapter_->OnProtocolReset();
+        }
+#endif
     });
 }

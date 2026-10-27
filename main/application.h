@@ -14,6 +14,10 @@
 #include <cstdint>
 #include <vector>
 
+#include "sdkconfig.h"
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+#include "xiaozhi_adapter.h"  // B′: agentscope-cpp esp-idf/xiaozhi-adapter（编译进 main）
+#endif
 #include "protocol.h"
 #include "ota.h"
 #include "audio_service.h"
@@ -145,6 +149,10 @@ private:
     NotifyPlayer notify_player_;
     uint32_t notification_playback_id_ = 0;
     std::unique_ptr<Ota> ota_;
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+    // B′ S0（设计 §4.1）：单一所有权，仅主任务调用其公开方法。
+    XiaozhiAdapterPtr xiaozhi_adapter_;
+#endif
 
     std::function<void(const std::string&)> mcp_broadcast_callback_;
 

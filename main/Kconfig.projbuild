@@ -8,6 +8,44 @@ config XIAOZHI_AGENTSCOPE
         Set AGENTSCOPE_CPP_ROOT to the agentscope-cpp checkout before configuring.
         This build switch alone does not enable the Agent runtime or alter voice routing.
 
+config XIAOZHI_AGENTSCOPE_ADAPTER
+    bool "Enable AgentScope host adapter (empty lifecycle slice S0)"
+    default n
+    depends on XIAOZHI_AGENTSCOPE
+    help
+        Compile the xiaozhi-adapter translation unit into main and create the
+        single-owner adapter instance. S0 is lifecycle-only: no voice, no MCP,
+        no model calls. Requires AGENTSCOPE_CPP_ROOT like XIAOZHI_AGENTSCOPE.
+
+if XIAOZHI_AGENTSCOPE_ADAPTER
+
+config XIAOZHI_AGENTSCOPE_ADAPTER_WORKER_STACK
+    int "Adapter worker task stack (bytes)"
+    default 6144
+    range 4096 16384
+    help
+        Fixed stack of the adapter worker task. S0 worker only drains the
+        bounded event queue; stack high-water mark must be measured on target.
+
+config XIAOZHI_AGENTSCOPE_ADAPTER_WORKER_PRIO
+    int "Adapter worker task priority"
+    default 5
+    range 1 24
+    help
+        Must stay below the main task priority (Application::Run sets 10) so
+        Schedule callbacks are never starved by the worker.
+
+config XIAOZHI_AGENTSCOPE_ADAPTER_EVENT_QUEUE_LEN
+    int "Adapter inbound event queue length"
+    default 8
+    range 1 32
+    help
+        Bounded queue between host callbacks and the worker. S0 enqueues
+        lifecycle events only; overflow drops with an explicit error log,
+        never blocks the caller.
+
+endif # XIAOZHI_AGENTSCOPE_ADAPTER
+
 config OTA_URL
     string "Default OTA URL"
     default "https://api.tenclass.net/xiaozhi/ota/"
