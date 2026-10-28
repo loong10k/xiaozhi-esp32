@@ -87,6 +87,15 @@ public:
     void Schedule(std::function<void()>&& callback);
 
     /**
+     * Submit a local text turn to the AgentScope adapter (main task only).
+     *
+     * Only explicitly local turns enter this path; the cloud "stt" display
+     * branch never calls it, so no parallel local ReAct is triggered.
+     * Returns false when the adapter is absent or the turn was not queued.
+     */
+    bool RequestLocalTurn(const std::string& text);
+
+    /**
      * Alert with status, message, emotion and optional sound
      */
     void Alert(const char* status, const char* message, const char* emotion = "", const std::string_view& sound = "");

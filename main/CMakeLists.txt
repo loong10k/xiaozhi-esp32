@@ -1119,6 +1119,8 @@ if(CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER)
         message(FATAL_ERROR "CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER requires AGENTSCOPE_CPP_ROOT")
     endif()
     list(APPEND SOURCES "${AGENTSCOPE_CPP_ROOT}/esp-idf/xiaozhi-adapter/xiaozhi_adapter.cc")
+    # S2 文本切片：宿主侧 runner/delivery/checkpoint 三件套（仅启用档编入）。
+    list(APPEND SOURCES "agentscope_local_turn.cc")
     list(APPEND INCLUDE_DIRS "${AGENTSCOPE_CPP_ROOT}/esp-idf/xiaozhi-adapter/include")
 endif()
 if(CONFIG_XIAOZHI_NETWORK_ETHERNET AND CONFIG_XIAOZHI_ETH_PHY_IP101)

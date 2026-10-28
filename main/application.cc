@@ -1,4 +1,5 @@
 #include "application.h"
+#include "agentscope_local_turn.h"
 #include "assets.h"
 #include "assets/lang_config.h"
 #include "audio_codec.h"
@@ -17,8 +18,10 @@
 #include <arpa/inet.h>
 #include <cJSON.h>
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <limits>
+#include <vector>
 
 #define TAG "Application"
 
@@ -182,6 +185,9 @@ void Application::Initialize() {
     xiaozhi_adapter_ = XiaozhiAdapter::Create();
     if (xiaozhi_adapter_ == nullptr) {
         ESP_LOGE("xiaozhi_adapter", "create failed: out of memory; continuing without adapter");
+    } else {
+        // 注入本地轮次三件套（runner/delivery/checkpoint）：适配器不持有模型/凭证/存储。
+        agentscope_local_turn::Install(*xiaozhi_adapter_);
     }
 #endif
 
@@ -1469,6 +1475,30 @@ void Application::SetAecMode(AecMode mode) {
 }
 
 void Application::PlaySound(const std::string_view& sound) { audio_service_.PlaySound(sound); }
+
+bool Application::RequestLocalTurn(const std::string& text) {
+#if CONFIG_XIAOZHI_AGENTSCOPE_ADAPTER
+    if (xiaozhi_adapter_ == nullptr) {
+        ESP_LOGW(TAG, "local turn requested without adapter; ignored");
+        return false;
+    }
+    // 轮次身份单调递增：同一 token 重复投递由适配器拒绝，保证一轮最多一响应。
+    static std::atomic<uint64_t> sequence{0};
+    const uint64_t token = sequence.fetch_add(1) + 1;
+    auto queued = xiaozhi_adapter_->OnLocalTranscript(text, token);
+    if (queued.is_err()) {
+        // Result<void,E> 只提供 unwrap_err()（无 error()）。
+        ESP_LOGE(TAG, "local turn %llu not queued: %d", static_cast<unsigned long long>(token),
+                 static_cast<int>(queued.unwrap_err()));
+        return false;
+    }
+    ESP_LOGI(TAG, "local turn %llu queued", static_cast<unsigned long long>(token));
+    return true;
+#else
+    (void)text;
+    return false;
+#endif
+}
 
 void Application::ResetProtocol() {
     Schedule([this]() {
