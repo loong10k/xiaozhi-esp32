@@ -8,6 +8,9 @@
 #include <freertos/task.h>
 
 #include "application.h"
+#if CONFIG_XIAOZHI_AGENTSCOPE_DEBUG_TRIGGER
+namespace agentscope_debug { void Start(); }
+#endif
 
 #define TAG "main"
 
@@ -25,5 +28,9 @@ extern "C" void app_main(void)
     // Initialize and run the application
     auto& app = Application::GetInstance();
     app.Initialize();
+#if CONFIG_XIAOZHI_AGENTSCOPE_DEBUG_TRIGGER
+    // G4 取证脚手架：Initialize 之后适配器已存在，串口触发才有意义。
+    agentscope_debug::Start();
+#endif
     app.Run();  // This function runs the main event loop and never returns
 }

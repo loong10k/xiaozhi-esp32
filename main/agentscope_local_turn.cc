@@ -38,6 +38,30 @@ constexpr const char* kDefaultModel = "qwen-max";
 constexpr const char* kSessionKey = "local";
 constexpr size_t kMaxApiKeyBytes = 256;
 
+
+/// 读取可选的模型覆盖（NVS agentscope/model）；缺失时回退默认模型。
+std::string load_model_override() {
+    nvs_handle_t handle = 0;
+    if (nvs_open(kNvsNamespace, NVS_READONLY, &handle) != ESP_OK) {
+        return {};
+    }
+    size_t length = 0;
+    if (nvs_get_str(handle, "model", nullptr, &length) != ESP_OK || length == 0 || length > 64) {
+        nvs_close(handle);
+        return {};
+    }
+    std::string name(length, '\0');
+    if (nvs_get_str(handle, "model", name.data(), &length) != ESP_OK) {
+        nvs_close(handle);
+        return {};
+    }
+    nvs_close(handle);
+    if (!name.empty() && name.back() == '\0') {
+        name.pop_back();
+    }
+    return name;
+}
+
 /// 进程级固定存储：Agent 与其依赖跨轮次复用，避免每轮重建带来的堆抖动。
 struct LocalTurnStorage {
     agentscope::NvsCheckpointSink sink{kNvsNamespace};
@@ -87,9 +111,11 @@ agentscope::AgentError ensure_agent() {
         ESP_LOGE(TAG, "local turn unavailable: no model credential configured");
         return agentscope::AgentError::InvalidArgument;
     }
+    const std::string model_name = load_model_override();
+    const std::string effective_model = model_name.empty() ? kDefaultModel : model_name;
     auto model = agentscope::core::model::DashScopeChatModel::Builder()
                      .apiKey(api_key)
-                     .modelName(kDefaultModel)
+                     .modelName(effective_model)
                      .build();
     if (!model) {
         ESP_LOGE(TAG, "local turn unavailable: model construction failed");
@@ -118,7 +144,7 @@ agentscope::AgentError ensure_agent() {
         return started.error();
     }
     g_storage.agent_ready = true;
-    ESP_LOGI(TAG, "local agent ready (model=%s session=%s)", kDefaultModel, kSessionKey);
+    ESP_LOGI(TAG, "local agent ready (model=%s session=%s)", effective_model.c_str(), kSessionKey);
     return agentscope::AgentError::None;
 }
 

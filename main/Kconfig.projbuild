@@ -19,6 +19,16 @@ config XIAOZHI_AGENTSCOPE_ADAPTER
 
 if XIAOZHI_AGENTSCOPE_ADAPTER
 
+config XIAOZHI_AGENTSCOPE_DEBUG_TRIGGER
+    bool "Enable serial debug trigger (test builds only)"
+    default n
+    depends on XIAOZHI_AGENTSCOPE_ADAPTER
+    help
+        Adds a USB-Serial-JTAG line reader so a host can drive local text turns
+        and write the model credential without voice input. Test scaffolding for
+        the G4 device gate: keep it off in release builds.
+
+
 config XIAOZHI_AGENTSCOPE_ADAPTER_WORKER_STACK
     int "Adapter worker task stack (bytes)"
     default 6144
