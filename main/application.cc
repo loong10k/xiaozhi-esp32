@@ -84,7 +84,10 @@ void Application::Initialize() {
 
     // Setup the audio service
     auto codec = board.GetAudioCodec();
+    ESP_LOGI(TAG, "audio codec acquired: in=%d out=%d", codec ? codec->input_sample_rate() : -1,
+             codec ? codec->output_sample_rate() : -1);
     audio_service_.Initialize(codec);
+    ESP_LOGI(TAG, "audio service initialized");
     audio_service_.Start();
     ESP_LOGI(TAG, "After board/audio init");
     SystemInfo::PrintHeapStats();
